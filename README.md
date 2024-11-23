@@ -95,20 +95,20 @@ python test_msc_flip_voc.py --model_path your/inference/model/path/WeCLIP_model_
 # inference on coco
 python test_msc_flip_coco.py --model_path your/inference/model/path/WeCLIP_model_iter_80000.pth
 ``` 
-### Get Knowledge Graph
-# can just use the npy we provide, or
+# Get Knowledge Graph
+### can just use the npy we provide, or
 
-# inference on voc
+### inference on voc
 python graph_coco.py
 python graph_coco_cos.py
-# inference on coco
+### inference on coco
 python graph_voc.py
 python graph_cos.py
 
-### Eval on SAM (Segment Anything Model)
-# Eval on voc
+# Eval on SAM (Segment Anything Model)
+### Eval on voc
 python eval_voc.py
-# Eval on coco
+### Eval on coco
 python eval_coco.py
 
 
