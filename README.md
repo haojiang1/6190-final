@@ -1,4 +1,4 @@
-## Frozen CLIP: A Strong Backbone for Weakly Supervised Semantic Segmentation (CVPR 2024 Highlight)
+## Knowledge Graph based WeCLIP model
 
 Code of CVPR 2024 paper: Frozen CLIP: A Strong Backbone for Weakly Supervised Semantic Segmentation.
 
