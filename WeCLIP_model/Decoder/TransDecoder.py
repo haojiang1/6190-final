@@ -21,7 +21,7 @@ class AttentionPool2d(nn.Module):
     def forward(self, x, H, W):
         x = x.reshape(x.shape[0], x.shape[1], x.shape[2] * x.shape[3]).permute(2, 0, 1)  # NCHW -> (HW)NC
         x = torch.cat([x.mean(dim=0, keepdim=True), x], dim=0)  # (HW+1)NC
-        self.positional_embedding_new = upsample_pos_emb(self.positional_embedding, (H//32,W//32))
+        self.positional_embedding_new = upsample_pos_emb(self.positional_embedding, (H // 32, W // 32))
         x = x + self.positional_embedding_new[:, None, :].to(x.dtype)  # (HW+1)NC
         x, attn_weight = F.multi_head_attention_forward(
             query=x, key=x, value=x,
@@ -43,7 +43,6 @@ class AttentionPool2d(nn.Module):
             need_weights=False
         )
         return x[0]
-
 
 
 class LayerNorm(nn.LayerNorm):
@@ -76,14 +75,13 @@ class ResidualAttentionBlock(nn.Module):
 
     def attention(self, x: torch.Tensor):
         self.attn_mask = self.attn_mask.to(dtype=x.dtype, device=x.device) if self.attn_mask is not None else None
-        return self.attn(x, x, x, need_weights=True, attn_mask=self.attn_mask)#[0]
+        return self.attn(x, x, x, need_weights=True, attn_mask=self.attn_mask)  # [0]
 
     def forward(self, x: torch.Tensor):
-        attn_output, attn_weight = self.attention(self.ln_1(x))#(L,N,E)  (N,L,L)
+        attn_output, attn_weight = self.attention(self.ln_1(x))  # (L,N,E)  (N,L,L)
         x = x + attn_output
         x = x + self.mlp(self.ln_2(x))
         return x, attn_weight
-
 
 
 class Transformer(nn.Module):
@@ -110,34 +108,41 @@ class DecoderTransformer(nn.Module):
         self.linear_pred = nn.Conv2d(width, output_dim, kernel_size=1)
         self.linear_pred2 = nn.Conv2d(width, output_dim, kernel_size=1)
         self.linear_pred3 = nn.Conv2d(width, output_dim, kernel_size=1)
+        # self.linear_pred4 = nn.Linear(output_dim, output_dim)
+        # self.linear_pred5 = nn.Linear(output_dim, output_dim)
+        # self.linear_pred6 = nn.Linear(output_dim, output_dim)
 
     def forward(self, x: torch.Tensor):
         b, c, h, w = x.shape
-        x = x.reshape(b, c, h*w) # NDL
+        x = x.reshape(b, c, h * w)  # NDL
         x = x.permute(2, 0, 1)  # NDL -> LND
 
-        x, attn_weights_list = self.transformer(x) # L,N,D
-        
+        x, attn_weights_list = self.transformer(x)  # L,N,D
+
         x = x.permute(1, 2, 0)
         x = x.reshape(b, c, h, w)
         logit = self.linear_pred(x)
+        # logit = self.linear_pred6(logit)
         _logit = self.linear_pred2(x)
         __logit = self.linear_pred3(x)
         class_count = logit.shape[1]
-        knowledge_graph = torch.from_numpy(np.load('/data3/zhangsn/Project/liyu/WeCLIP/knowledge_graph/VOC2017.npy')).float().cuda()
-        knowledge_graph2 = torch.from_numpy(np.load('/data3/zhangsn/Project/liyu/WeCLIP/knowledge_graph/VOC2017_cos.npy')).float().cuda()
+        knowledge_graph = torch.from_numpy(np.load('knowledge_graph/VOC2017.npy')).float().cuda()
+        knowledge_graph2 = torch.from_numpy(np.load('knowledge_graph/VOC2017_cos.npy')).float().cuda()
         assert class_count == knowledge_graph.shape[0]
 
         # GCN for basic KG
         _logit = _logit.permute(0, 2, 3, 1)
         _logit = torch.matmul(_logit, knowledge_graph)
         _logit = F.relu(_logit)
+        # _logit = self.linear_pred6(_logit)
         _logit = _logit.permute(0, 3, 1, 2)
         # GCN for semantic KG
         __logit = __logit.permute(0, 2, 3, 1)
         __logit = torch.matmul(__logit, knowledge_graph2)
         __logit = F.relu(__logit)
+        # __logit = self.linear_pred6(__logit)
         __logit = __logit.permute(0, 3, 1, 2)
 
         logit = _logit + logit + __logit
+
         return logit, attn_weights_list
